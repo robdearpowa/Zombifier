@@ -1,0 +1,4 @@
+name: Zombifier
+version: '${version}'
+main: org.dearpowa.zombifier.Zombifier
+api-version: '1.20'
