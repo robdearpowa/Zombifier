@@ -74,6 +74,7 @@ class Zombifier : JavaPlugin(), Listener {
 
             // Rimuovi l'inventario del giocatore
             player.inventory.clear()
+            event.drops.clear()
         }
     }
 
