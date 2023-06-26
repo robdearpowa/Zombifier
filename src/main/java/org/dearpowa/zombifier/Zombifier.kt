@@ -1,6 +1,8 @@
 package org.dearpowa.zombifier
 
+import org.bukkit.block.Biome
 import org.bukkit.entity.EntityType
+import org.bukkit.entity.Husk
 import org.bukkit.entity.Zombie
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -28,9 +30,19 @@ class Zombifier : JavaPlugin(), Listener {
     fun onPlayerDeath(event: PlayerDeathEvent) {
         val player = event.player
 
-        val undead = player.world.spawnEntity(player.location, EntityType.ZOMBIE)
+        val playerLocation = player.location
+        val biome = playerLocation.block.biome
 
-        if (undead is Zombie) {
+
+        val zombieType = when (biome) {
+            Biome.DESERT, Biome.DESERT_HILLS -> EntityType.HUSK // Zombie del deserto (Husk)
+            Biome.OCEAN, Biome.DEEP_OCEAN -> EntityType.DROWNED // Zombie affogato (Drowned)
+            else -> EntityType.ZOMBIE // Zombie normale
+        }
+
+        val undead = player.world.spawnEntity(playerLocation, zombieType)
+
+        if (undead is Zombie || undead is Drowned || undead is Husk) {
 
             val mainHand = player.inventory.itemInMainHand
             val offHand = player.inventory.itemInOffHand
