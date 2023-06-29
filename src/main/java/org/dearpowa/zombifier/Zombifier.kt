@@ -1,11 +1,12 @@
 package org.dearpowa.zombifier
 
 import org.bukkit.block.Biome
+import org.bukkit.entity.Ageable
 import org.bukkit.entity.EntityType
-import org.bukkit.entity.Husk
-import org.bukkit.entity.Zombie
+import org.bukkit.entity.LivingEntity
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
+import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.plugin.java.JavaPlugin
@@ -31,19 +32,33 @@ class Zombifier : JavaPlugin(), Listener {
         val player = event.player
 
         val playerLocation = player.location
-        val biome = playerLocation.block.biome
 
 
-        val zombieType = when (biome) {
-            Biome.DESERT, Biome.DESERT_HILLS -> EntityType.HUSK // Zombie del deserto (Husk)
-            Biome.OCEAN, Biome.DEEP_OCEAN -> EntityType.DROWNED // Zombie affogato (Drowned)
-            else -> EntityType.ZOMBIE // Zombie normale
+        val undeadType = when (player.lastDamageCause?.cause) {
+            EntityDamageEvent.DamageCause.FIRE,
+            EntityDamageEvent.DamageCause.FIRE_TICK,
+            EntityDamageEvent.DamageCause.LAVA,
+            EntityDamageEvent.DamageCause.HOT_FLOOR,
+            EntityDamageEvent.DamageCause.LIGHTNING -> EntityType.WITHER_SKELETON // Scheletro Nero
+
+            EntityDamageEvent.DamageCause.DROWNING -> EntityType.DROWNED // Zombie affogato
+
+            EntityDamageEvent.DamageCause.FREEZE -> EntityType.STRAY // Scheletro delle nevi
+
+            else -> when (playerLocation.block.biome) {
+                Biome.DESERT -> EntityType.HUSK // Zombie del deserto
+                Biome.OCEAN, Biome.DEEP_OCEAN -> EntityType.DROWNED // Zombie affogato
+                Biome.NETHER_WASTES -> EntityType.SKELETON // Scheletro normale
+                else -> EntityType.ZOMBIE // Zombie normale
+            }
         }
 
-        val undead = player.world.spawnEntity(playerLocation, zombieType)
+        val undead = player.world.spawnEntity(playerLocation, undeadType)
 
-        if (undead is Zombie || undead is Drowned || undead is Husk) {
-
+        // Se il mob che ho creato è una livingEntity (quindi può avere un equipment)
+        // allora gli imposto tutto il necessario per "copiare" il player
+        (undead as? LivingEntity)?.apply {
+            val name = player.name()
             val mainHand = player.inventory.itemInMainHand
             val offHand = player.inventory.itemInOffHand
             val helmet = player.inventory.helmet
@@ -53,41 +68,45 @@ class Zombifier : JavaPlugin(), Listener {
 
 
             // Copia l'inventario del giocatore all'entità zombie
-            undead.equipment.setItemInMainHand(mainHand)
-            undead.equipment.setItemInOffHand(offHand)
-            undead.equipment.helmet = helmet
-            undead.equipment.chestplate = chestplate
-            undead.equipment.leggings = leggings
-            undead.equipment.boots = boots
+            equipment?.setItemInMainHand(mainHand)
+            equipment?.setItemInOffHand(offHand)
+            equipment?.helmet = helmet
+            equipment?.chestplate = chestplate
+            equipment?.leggings = leggings
+            equipment?.boots = boots
 
-            // Cambio nome allo zombie
-            undead.customName(player.name())
-            undead.isCustomNameVisible = true
+            // Cambio nome al non morto
+            customName(name)
+            isCustomNameVisible = true
 
-            // Prevengo il despawn dello zombie
-            undead.removeWhenFarAway = false
+            // Prevengo il despawn del non morto
+            removeWhenFarAway = false
 
-            // Imposto lo zombie sempre adulto
-            undead.setAdult()
-
-            //Creo l'invetario dello zombie
-            val undeadInventory = UndeadInventory(undead.uniqueId, this, 54)
-
-            //Copio l'inventario del player nello zombie
-            for (item in player.inventory) {
-                if (item == null) continue
-                undeadInventory.inventory.addItem(item.clone())
+            // Imposto il non morto come adulto adulto (se può avere un età)
+            (this as? Ageable)?.apply {
+                setAdult()
             }
 
-            undeadList.add(undeadInventory)
-
-            UndeadInventory.saveAll(this)
-
-
-            // Rimuovi l'inventario del giocatore
-            player.inventory.clear()
-            event.drops.clear()
         }
+
+        // Creo l'invetario del non morto
+        val undeadInventory = UndeadInventory(undead.uniqueId, this, 54)
+
+        // Copio l'inventario del player nel non morto
+        for (item in player.inventory) {
+            if (item == null) continue
+            undeadInventory.inventory.addItem(item.clone())
+        }
+
+        // Salvo la copia dell'inventario nella mia mappa
+        undeadList.add(undeadInventory)
+
+        // Salvo tutti gli inventari su disco
+        UndeadInventory.saveAll(this)
+
+        // Rimuovi l'inventario del player
+        player.inventory.clear()
+        event.drops.clear()
     }
 
     @EventHandler
