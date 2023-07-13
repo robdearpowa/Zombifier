@@ -14,17 +14,20 @@ import org.bukkit.plugin.java.JavaPlugin
 class Zombifier : JavaPlugin(), Listener {
 
     val undeadList = mutableListOf<UndeadInventory>()
+    val config = Config()
 
     override fun onEnable() {
         // Plugin startup logic
         logger.info("Hello World from Zombifier!")
         //UndeadInventory.loadAll(this)
+        config.load(this)
         server.pluginManager.registerEvents(this, this)
     }
 
     override fun onDisable() {
         // Plugin shutdown logic
         // UndeadInventory.saveAll(this)
+        config.save(this)
     }
 
     @EventHandler
