@@ -18,13 +18,13 @@ class Zombifier : JavaPlugin(), Listener {
     override fun onEnable() {
         // Plugin startup logic
         logger.info("Hello World from Zombifier!")
-        UndeadInventory.loadAll(this)
+        //UndeadInventory.loadAll(this)
         server.pluginManager.registerEvents(this, this)
     }
 
     override fun onDisable() {
         // Plugin shutdown logic
-        UndeadInventory.saveAll(this)
+        // UndeadInventory.saveAll(this)
     }
 
     @EventHandler
@@ -33,6 +33,7 @@ class Zombifier : JavaPlugin(), Listener {
 
         val playerLocation = player.location
 
+        logger.info("Player ${player.name} died")
 
         val undeadType = when (player.lastDamageCause?.cause) {
             EntityDamageEvent.DamageCause.FIRE,
@@ -52,6 +53,8 @@ class Zombifier : JavaPlugin(), Listener {
                 else -> EntityType.ZOMBIE // Zombie normale
             }
         }
+
+        logger.info("Spawing undead of type: ${undeadType.name} at ${playerLocation.toString()}")
 
         val undead = player.world.spawnEntity(playerLocation, undeadType)
 
@@ -102,7 +105,7 @@ class Zombifier : JavaPlugin(), Listener {
         undeadList.add(undeadInventory)
 
         // Salvo tutti gli inventari su disco
-        UndeadInventory.saveAll(this)
+        // UndeadInventory.saveAll(this)
 
         // Rimuovi l'inventario del player
         player.inventory.clear()
